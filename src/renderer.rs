@@ -133,7 +133,10 @@ mod tests {
     #[test]
     fn renders_multiple_characters_on_joined_rows() {
         let output = render("Hi", &StandardFont, &default_options()).unwrap();
-        assert_eq!(output, "#   # #####\n#   #   #  \n#####   #  \n#   #   #  \n#   # #####");
+        assert_eq!(
+            output,
+            "#   # #####\n#   #   #  \n#####   #  \n#   #   #  \n#   # #####"
+        );
     }
 
     #[test]

@@ -2,26 +2,48 @@ pub mod cli;
 pub mod error;
 pub mod font;
 pub mod formatter;
+pub mod image_renderer;
 pub mod renderer;
 pub mod terminal;
 
 pub use error::RenderError;
 pub use font::{Font, StandardFont};
+pub use image_renderer::{ImageRenderOptions, render_image};
 pub use renderer::{Alignment, RenderOptions, Theme, render};
 
-use cli::Cli;
+use cli::{Cli, Commands};
 
 pub fn run(cli: Cli) -> Result<String, RenderError> {
-    let text = cli.validated_text()?;
-    let font = StandardFont;
-    let width = resolve_output_width(cli.width, terminal::detect_terminal_width())?;
-    let options = RenderOptions {
-        width,
-        alignment: cli.align,
-        theme: cli.theme,
-    };
+    match cli.command {
+        Commands::Text {
+            text,
+            font: _,
+            align,
+            width,
+            theme,
+        } => {
+            let text = Cli::validated_text(&text)?;
+            let font = StandardFont;
+            let width = resolve_output_width(width, terminal::detect_terminal_width())?;
+            let options = RenderOptions {
+                width,
+                alignment: align,
+                theme,
+            };
 
-    render(text, &font, &options)
+            render(text, &font, &options)
+        }
+        Commands::Image {
+            path,
+            width,
+            invert,
+        } => {
+            let width = resolve_output_width(width, terminal::detect_terminal_width())?;
+            let options = ImageRenderOptions { width, invert };
+
+            render_image(&path, &options)
+        }
+    }
 }
 
 pub fn resolve_output_width(

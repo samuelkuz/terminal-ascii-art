@@ -1,7 +1,11 @@
 use crate::error::RenderError;
 use crate::renderer::Alignment;
 
-pub fn align_line(line: &str, alignment: Alignment, width: Option<usize>) -> Result<String, RenderError> {
+pub fn align_line(
+    line: &str,
+    alignment: Alignment,
+    width: Option<usize>,
+) -> Result<String, RenderError> {
     let Some(width) = width else {
         return Ok(line.to_owned());
     };

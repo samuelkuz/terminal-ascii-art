@@ -1,4 +1,6 @@
-use clap::{Parser, ValueEnum};
+use std::path::PathBuf;
+
+use clap::{Parser, Subcommand, ValueEnum};
 
 use crate::error::RenderError;
 use crate::renderer::{Alignment, Theme};
@@ -9,34 +11,61 @@ pub enum FontName {
 }
 
 #[derive(Debug, Parser)]
-#[command(name = "terminal-ascii-art", version, about = "Render text as ASCII art")]
+#[command(
+    name = "terminal-ascii-art",
+    version,
+    about = "Render text as ASCII art"
+)]
 pub struct Cli {
-    /// Text to render as ASCII art.
-    pub text: String,
+    #[command(subcommand)]
+    pub command: Commands,
+}
 
-    /// Built-in font to use.
-    #[arg(long, value_enum, default_value_t = FontName::Standard)]
-    pub font: FontName,
+#[derive(Debug, Subcommand)]
+pub enum Commands {
+    /// Render text as ASCII art.
+    Text {
+        /// Text to render as ASCII art.
+        text: String,
 
-    /// Horizontal alignment when a width is provided.
-    #[arg(long, value_enum, default_value_t = Alignment::Left)]
-    pub align: Alignment,
+        /// Built-in font to use.
+        #[arg(long, value_enum, default_value_t = FontName::Standard)]
+        font: FontName,
 
-    /// Render width in columns.
-    #[arg(long)]
-    pub width: Option<usize>,
+        /// Horizontal alignment when a width is provided.
+        #[arg(long, value_enum, default_value_t = Alignment::Left)]
+        align: Alignment,
 
-    /// ASCII art drawing theme.
-    #[arg(long, value_enum, default_value_t = Theme::Plain)]
-    pub theme: Theme,
+        /// Render width in columns.
+        #[arg(long)]
+        width: Option<usize>,
+
+        /// ASCII art drawing theme.
+        #[arg(long, value_enum, default_value_t = Theme::Plain)]
+        theme: Theme,
+    },
+
+    /// Render an image file as ASCII art.
+    Image {
+        /// Path to a PNG or JPEG image.
+        path: PathBuf,
+
+        /// Render width in columns.
+        #[arg(long)]
+        width: Option<usize>,
+
+        /// Invert brightness-to-character mapping.
+        #[arg(long)]
+        invert: bool,
+    },
 }
 
 impl Cli {
-    pub fn validated_text(&self) -> Result<&str, RenderError> {
-        if self.text.trim().is_empty() {
+    pub fn validated_text(text: &str) -> Result<&str, RenderError> {
+        if text.trim().is_empty() {
             return Err(RenderError::EmptyInput);
         }
 
-        Ok(&self.text)
+        Ok(text)
     }
 }

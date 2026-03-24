@@ -1,7 +1,8 @@
 use std::error::Error;
 use std::fmt::{Display, Formatter};
+use std::path::PathBuf;
 
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, PartialEq, Eq)]
 pub enum RenderError {
     EmptyInput,
     TerminalWidthExceeded {
@@ -11,6 +12,18 @@ pub enum RenderError {
     ContentWidthExceeded {
         width: usize,
         line_width: usize,
+    },
+    FileRead {
+        path: PathBuf,
+        message: String,
+    },
+    ImageDecode {
+        path: PathBuf,
+        message: String,
+    },
+    InvalidImageDimensions {
+        width: u32,
+        height: u32,
     },
 }
 
@@ -25,13 +38,19 @@ impl Display for RenderError {
                 f,
                 "requested width {requested_width} exceeds terminal width {terminal_width}"
             ),
-            Self::ContentWidthExceeded {
-                width,
-                line_width,
-            } => write!(
+            Self::ContentWidthExceeded { width, line_width } => write!(
                 f,
                 "rendered content width {line_width} exceeds available width {width}"
             ),
+            Self::FileRead { path, message } => {
+                write!(f, "failed to read image '{}': {message}", path.display())
+            }
+            Self::ImageDecode { path, message } => {
+                write!(f, "failed to decode image '{}': {message}", path.display())
+            }
+            Self::InvalidImageDimensions { width, height } => {
+                write!(f, "image dimensions {width}x{height} cannot be rendered")
+            }
         }
     }
 }

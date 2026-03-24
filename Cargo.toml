@@ -5,8 +5,10 @@ edition = "2024"
 
 [dependencies]
 clap = { version = "4.5.38", features = ["derive"] }
+image = { version = "0.25.10", default-features = false, features = ["jpeg", "png"] }
 terminal_size = "0.4.3"
 
 [dev-dependencies]
 assert_cmd = "2.0.16"
 predicates = "3.1.2"
+tempfile = "3.20.0"
