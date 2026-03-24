@@ -1,0 +1,12 @@
+[package]
+name = "terminal-ascii-art"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+clap = { version = "4.5.38", features = ["derive"] }
+terminal_size = "0.4.3"
+
+[dev-dependencies]
+assert_cmd = "2.0.16"
+predicates = "3.1.2"
