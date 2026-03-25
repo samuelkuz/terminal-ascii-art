@@ -11,6 +11,7 @@ const TERMINAL_ASPECT_RATIO: f32 = 0.5;
 pub struct ImageRenderOptions {
     pub width: Option<usize>,
     pub invert: bool,
+    pub color: bool,
 }
 
 pub fn render_image(path: &Path, options: &ImageRenderOptions) -> Result<String, RenderError> {
@@ -32,16 +33,25 @@ pub fn render_image(path: &Path, options: &ImageRenderOptions) -> Result<String,
         })?;
     let target_height = calculate_target_height(source_width, source_height, target_width)?;
 
-    let grayscale = image
+    let resized = image
         .resize_exact(target_width, target_height, FilterType::Triangle)
-        .into_luma8();
+        .into_rgb8();
 
-    let mut lines = Vec::with_capacity(grayscale.height() as usize);
-    for y in 0..grayscale.height() {
-        let mut line = String::with_capacity(grayscale.width() as usize);
-        for x in 0..grayscale.width() {
-            let brightness = grayscale.get_pixel(x, y)[0];
-            line.push(map_brightness_to_char(brightness, options.invert));
+    let mut lines = Vec::with_capacity(resized.height() as usize);
+    for y in 0..resized.height() {
+        let mut line = String::with_capacity(resized.width() as usize);
+        for x in 0..resized.width() {
+            let pixel = resized.get_pixel(x, y);
+            let brightness = pixel_brightness(pixel[0], pixel[1], pixel[2]);
+            let character = map_brightness_to_char(brightness, options.invert);
+
+            if options.color {
+                line.push_str(&format_colored_char(
+                    character, pixel[0], pixel[1], pixel[2],
+                ));
+            } else {
+                line.push(character);
+            }
         }
         lines.push(line);
     }
@@ -76,6 +86,10 @@ fn calculate_target_height(
     Ok(scaled_height)
 }
 
+fn pixel_brightness(red: u8, green: u8, blue: u8) -> u8 {
+    (0.299 * red as f32 + 0.587 * green as f32 + 0.114 * blue as f32).round() as u8
+}
+
 fn map_brightness_to_char(brightness: u8, invert: bool) -> char {
     let normalized = brightness as f32 / u8::MAX as f32;
     let index = (normalized * (ASCII_RAMP.len() - 1) as f32).round() as usize;
@@ -88,9 +102,20 @@ fn map_brightness_to_char(brightness: u8, invert: bool) -> char {
     ASCII_RAMP[mapped_index] as char
 }
 
+fn format_colored_char(character: char, red: u8, green: u8, blue: u8) -> String {
+    if character == ' ' {
+        return String::from(" ");
+    }
+
+    format!("\x1b[38;2;{red};{green};{blue}m{character}\x1b[0m")
+}
+
 #[cfg(test)]
 mod tests {
-    use super::{ASCII_RAMP, ImageRenderOptions, calculate_target_height, map_brightness_to_char};
+    use super::{
+        ASCII_RAMP, ImageRenderOptions, calculate_target_height, format_colored_char,
+        map_brightness_to_char, pixel_brightness,
+    };
     use crate::error::RenderError;
 
     #[test]
@@ -143,8 +168,30 @@ mod tests {
         let options = ImageRenderOptions {
             width: Some(80),
             invert: false,
+            color: false,
         };
         assert_eq!(options.width, Some(80));
         assert!(!options.invert);
+        assert!(!options.color);
+    }
+
+    #[test]
+    fn brightness_uses_weighted_rgb_luma() {
+        assert_eq!(pixel_brightness(255, 0, 0), 76);
+        assert_eq!(pixel_brightness(0, 255, 0), 150);
+        assert_eq!(pixel_brightness(0, 0, 255), 29);
+    }
+
+    #[test]
+    fn colored_char_wraps_character_with_truecolor_escape() {
+        assert_eq!(
+            format_colored_char('#', 1, 2, 3),
+            "\u{1b}[38;2;1;2;3m#\u{1b}[0m"
+        );
+    }
+
+    #[test]
+    fn colored_spaces_stay_plain_spaces() {
+        assert_eq!(format_colored_char(' ', 1, 2, 3), " ");
     }
 }

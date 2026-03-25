@@ -57,6 +57,10 @@ pub enum Commands {
         /// Invert brightness-to-character mapping.
         #[arg(long)]
         invert: bool,
+
+        /// Emit 24-bit ANSI foreground color for each ASCII character.
+        #[arg(long)]
+        color: bool,
     },
 }
 

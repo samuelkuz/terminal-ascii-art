@@ -191,3 +191,15 @@ fn image_mode_rejects_explicit_width_larger_than_terminal() {
             "requested width 4 exceeds terminal width 3",
         ));
 }
+
+#[test]
+fn image_mode_can_emit_ansi_color() {
+    let mut command = Command::cargo_bin("terminal-ascii-art").unwrap();
+    let image = write_jpeg_fixture();
+
+    command
+        .args(["image", image.to_str().unwrap(), "--width", "4", "--color"])
+        .assert()
+        .success()
+        .stdout(predicate::str::contains("\u{1b}[38;2;"));
+}

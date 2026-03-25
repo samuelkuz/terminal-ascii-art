@@ -37,9 +37,14 @@ pub fn run(cli: Cli) -> Result<String, RenderError> {
             path,
             width,
             invert,
+            color,
         } => {
             let width = resolve_output_width(width, terminal::detect_terminal_width())?;
-            let options = ImageRenderOptions { width, invert };
+            let options = ImageRenderOptions {
+                width,
+                invert,
+                color,
+            };
 
             render_image(&path, &options)
         }
