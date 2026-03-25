@@ -6,7 +6,8 @@ fn main() {
     let cli = Cli::parse();
 
     match run(cli) {
-        Ok(output) => println!("{output}"),
+        Ok(Some(output)) => println!("{output}"),
+        Ok(None) => {}
         Err(error) => {
             eprintln!("Error: {error}");
             std::process::exit(1);

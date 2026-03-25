@@ -5,15 +5,17 @@ pub mod formatter;
 pub mod image_renderer;
 pub mod renderer;
 pub mod terminal;
+pub mod video;
 
 pub use error::RenderError;
 pub use font::{Font, StandardFont};
-pub use image_renderer::{ImageRenderOptions, render_image};
+pub use image_renderer::{ImageRenderOptions, render_image, render_rgb_frame};
 pub use renderer::{Alignment, RenderOptions, Theme, render};
+pub use video::{HwAccelMode, VideoRenderOptions, play_video};
 
 use cli::{Cli, Commands};
 
-pub fn run(cli: Cli) -> Result<String, RenderError> {
+pub fn run(cli: Cli) -> Result<Option<String>, RenderError> {
     match cli.command {
         Commands::Text {
             text,
@@ -31,7 +33,7 @@ pub fn run(cli: Cli) -> Result<String, RenderError> {
                 theme,
             };
 
-            render(text, &font, &options)
+            Ok(Some(render(text, &font, &options)?))
         }
         Commands::Image {
             path,
@@ -46,7 +48,29 @@ pub fn run(cli: Cli) -> Result<String, RenderError> {
                 color,
             };
 
-            render_image(&path, &options)
+            Ok(Some(render_image(&path, &options)?))
+        }
+        Commands::Video {
+            path,
+            width,
+            fps,
+            invert,
+            grayscale,
+            loop_playback,
+            hwaccel,
+        } => {
+            let width = resolve_output_width(width, terminal::detect_terminal_width())?;
+            let options = VideoRenderOptions {
+                width,
+                fps,
+                invert,
+                color: !grayscale,
+                loop_playback,
+                hwaccel,
+            };
+
+            play_video(&path, &options)?;
+            Ok(None)
         }
     }
 }

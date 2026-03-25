@@ -203,3 +203,56 @@ fn image_mode_can_emit_ansi_color() {
         .success()
         .stdout(predicate::str::contains("\u{1b}[38;2;"));
 }
+
+#[test]
+fn video_mode_rejects_invalid_fps() {
+    let mut command = Command::cargo_bin("terminal-ascii-art").unwrap();
+
+    command
+        .args(["video", "clip.mp4", "--fps", "0"])
+        .assert()
+        .failure()
+        .stderr(predicate::str::contains("0").and(predicate::str::contains("1..=15")));
+}
+
+#[test]
+fn video_mode_reports_missing_ffmpeg() {
+    let mut command = Command::cargo_bin("terminal-ascii-art").unwrap();
+
+    command
+        .env("PATH", "")
+        .args([
+            "video",
+            "clip.mp4",
+            "--fps",
+            "12",
+            "--loop",
+            "--grayscale",
+            "--hwaccel",
+            "none",
+        ])
+        .assert()
+        .failure()
+        .stderr(predicate::str::contains(
+            "required dependency 'ffmpeg' was not found in PATH",
+        ));
+}
+
+#[test]
+fn video_mode_reports_missing_input_when_ffmpeg_is_available() {
+    if std::process::Command::new("ffmpeg")
+        .arg("-version")
+        .output()
+        .is_err()
+    {
+        return;
+    }
+
+    let mut command = Command::cargo_bin("terminal-ascii-art").unwrap();
+
+    command
+        .args(["video", "does-not-exist.mp4", "--hwaccel", "none"])
+        .assert()
+        .failure()
+        .stderr(predicate::str::contains("failed to inspect video"));
+}
