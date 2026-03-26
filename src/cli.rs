@@ -6,11 +6,14 @@ use crate::error::RenderError;
 use crate::renderer::{Alignment, Theme};
 use crate::video::HwAccelMode;
 
+/// Built-in font names accepted by the CLI.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, ValueEnum)]
 pub enum FontName {
+    /// The default 5-row block font bundled with the crate.
     Standard,
 }
 
+/// Top-level command-line arguments for the application.
 #[derive(Debug, Parser)]
 #[command(
     name = "terminal-ascii-art",
@@ -18,10 +21,12 @@ pub enum FontName {
     about = "Render text as ASCII art"
 )]
 pub struct Cli {
+    /// The subcommand describing which rendering mode to run.
     #[command(subcommand)]
     pub command: Commands,
 }
 
+/// Supported render modes exposed by the binary.
 #[derive(Debug, Subcommand)]
 pub enum Commands {
     /// Render text as ASCII art.
@@ -96,6 +101,7 @@ pub enum Commands {
 }
 
 impl Cli {
+    /// Rejects text inputs that are empty or contain only whitespace.
     pub fn validated_text(text: &str) -> Result<&str, RenderError> {
         if text.trim().is_empty() {
             return Err(RenderError::EmptyInput);

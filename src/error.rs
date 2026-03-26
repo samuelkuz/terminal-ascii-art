@@ -2,47 +2,37 @@ use std::error::Error;
 use std::fmt::{Display, Formatter};
 use std::path::PathBuf;
 
+/// Errors that can occur while validating input or rendering terminal output.
 #[derive(Debug, PartialEq, Eq)]
 pub enum RenderError {
+    /// The supplied text input was empty after trimming whitespace.
     EmptyInput,
+    /// The requested render width is wider than the detected terminal.
     TerminalWidthExceeded {
         requested_width: usize,
         terminal_width: usize,
     },
-    ContentWidthExceeded {
-        width: usize,
-        line_width: usize,
-    },
-    FileRead {
-        path: PathBuf,
-        message: String,
-    },
-    ImageDecode {
-        path: PathBuf,
-        message: String,
-    },
-    MissingDependency {
-        name: &'static str,
-    },
-    InvalidImageDimensions {
-        width: u32,
-        height: u32,
-    },
+    /// Rendered content could not fit within the requested width.
+    ContentWidthExceeded { width: usize, line_width: usize },
+    /// Opening or reading an image file failed.
+    FileRead { path: PathBuf, message: String },
+    /// Decoding a supported image file failed.
+    ImageDecode { path: PathBuf, message: String },
+    /// An external binary required for video playback was not available.
+    MissingDependency { name: &'static str },
+    /// Source or target media dimensions were zero or overflowed supported bounds.
+    InvalidImageDimensions { width: u32, height: u32 },
+    /// A raw RGB frame buffer had an unexpected byte length.
     InvalidFrameBuffer {
         expected_len: usize,
         actual_len: usize,
     },
-    VideoProbe {
-        path: PathBuf,
-        message: String,
-    },
-    VideoDecode {
-        path: PathBuf,
-        message: String,
-    },
-    TerminalIo {
-        message: String,
-    },
+    /// Probing source video metadata with `ffprobe` failed.
+    VideoProbe { path: PathBuf, message: String },
+    /// Decoding or streaming video frames with `ffmpeg` failed.
+    VideoDecode { path: PathBuf, message: String },
+    /// Terminal setup, drawing, or teardown failed.
+    TerminalIo { message: String },
 }
 
 impl Display for RenderError {

@@ -7,13 +7,18 @@ use crate::error::RenderError;
 const ASCII_RAMP: &[u8] = b"@%#*+=-:. ";
 const TERMINAL_ASPECT_RATIO: f32 = 0.45;
 
+/// Options controlling image and RGB-frame rendering.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct ImageRenderOptions {
+    /// Preferred output width in columns.
     pub width: Option<usize>,
+    /// Whether bright pixels should map to dense characters instead of sparse ones.
     pub invert: bool,
+    /// Whether to emit 24-bit ANSI foreground color escape sequences.
     pub color: bool,
 }
 
+/// Loads an image from disk, resizes it for the current terminal, and renders ASCII output.
 pub fn render_image(path: &Path, options: &ImageRenderOptions) -> Result<String, RenderError> {
     let reader = image::ImageReader::open(path).map_err(|error| RenderError::FileRead {
         path: path.to_path_buf(),
@@ -40,6 +45,7 @@ pub fn render_image(path: &Path, options: &ImageRenderOptions) -> Result<String,
     render_rgb_frame(resized.as_raw(), resized.width(), resized.height(), options)
 }
 
+/// Resolves the target media dimensions using explicit width and terminal bounds when available.
 pub fn resolve_media_dimensions(
     requested_width: Option<usize>,
     source_width: u32,
@@ -116,6 +122,7 @@ pub fn resolve_media_dimensions(
     }
 }
 
+/// Resolves only the target media width using the same sizing rules as [`resolve_media_dimensions`].
 pub fn resolve_media_width(
     requested_width: Option<usize>,
     source_width: u32,
@@ -133,6 +140,7 @@ pub fn resolve_media_width(
     .map(|(width, _)| width as usize))
 }
 
+/// Calculates the output height for a target width while compensating for terminal cell aspect ratio.
 pub fn calculate_target_height(
     source_width: u32,
     source_height: u32,
@@ -154,6 +162,7 @@ pub fn calculate_target_height(
     Ok(scaled_height)
 }
 
+/// Scales media to fit within both width and height bounds while preserving aspect ratio.
 fn fit_media_within_bounds(
     source_width: u32,
     source_height: u32,
@@ -180,6 +189,7 @@ fn fit_media_within_bounds(
     Ok((target_width, target_height))
 }
 
+/// Calculates the output width for a target height while compensating for terminal cell aspect ratio.
 fn calculate_target_width(
     source_width: u32,
     source_height: u32,
@@ -200,6 +210,7 @@ fn calculate_target_width(
     Ok(scaled_width)
 }
 
+/// Renders a raw RGB24 frame buffer into ASCII art, optionally preserving pixel color.
 pub fn render_rgb_frame(
     frame: &[u8],
     width: u32,
@@ -235,20 +246,24 @@ pub fn render_rgb_frame(
     Ok(lines.join("\n"))
 }
 
+/// Computes the expected byte length for an RGB24 frame buffer.
 fn expected_rgb_buffer_len(width: u32, height: u32) -> Result<usize, RenderError> {
     let pixels = u64::from(width) * u64::from(height);
     let bytes = pixels.saturating_mul(3);
     usize::try_from(bytes).map_err(|_| RenderError::InvalidImageDimensions { width, height })
 }
 
+/// Reserves one terminal row for the prompt when auto-fitting media height.
 fn usable_terminal_height(terminal_height: usize) -> usize {
     terminal_height.saturating_sub(1).max(1)
 }
 
+/// Converts an RGB pixel to perceived luma for ASCII ramp mapping.
 fn pixel_brightness(red: u8, green: u8, blue: u8) -> u8 {
     (0.299 * red as f32 + 0.587 * green as f32 + 0.114 * blue as f32).round() as u8
 }
 
+/// Maps a brightness value to a character in the configured ASCII ramp.
 fn map_brightness_to_char(brightness: u8, invert: bool) -> char {
     let normalized = brightness as f32 / u8::MAX as f32;
     let index = (normalized * (ASCII_RAMP.len() - 1) as f32).round() as usize;
@@ -261,6 +276,7 @@ fn map_brightness_to_char(brightness: u8, invert: bool) -> char {
     ASCII_RAMP[mapped_index] as char
 }
 
+/// Wraps a non-space ASCII character in a 24-bit ANSI foreground color sequence.
 fn format_colored_char(character: char, red: u8, green: u8, blue: u8) -> String {
     if character == ' ' {
         return String::from(" ");

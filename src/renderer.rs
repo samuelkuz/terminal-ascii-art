@@ -4,27 +4,40 @@ use crate::error::RenderError;
 use crate::font::{Font, Glyph};
 use crate::formatter::align_line;
 
+/// Horizontal alignment applied to each rendered ASCII-art row.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, ValueEnum)]
 pub enum Alignment {
+    /// Leave content flush with the left edge.
     Left,
+    /// Center content within the available width.
     Center,
+    /// Right-align content within the available width.
     Right,
 }
 
+/// Character styling applied to rendered glyphs.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, ValueEnum)]
 pub enum Theme {
+    /// Emit the raw filled glyph shape.
     Plain,
+    /// Emit only the outer edge of each glyph.
     Outline,
+    /// Use a denser fill character for solid glyphs.
     Block,
 }
 
+/// Options controlling text layout and glyph styling.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct RenderOptions {
+    /// Total available output width in columns.
     pub width: Option<usize>,
+    /// Per-row horizontal alignment.
     pub alignment: Alignment,
+    /// Glyph fill style to apply.
     pub theme: Theme,
 }
 
+/// Renders multi-line text into ASCII art using the provided font and options.
 pub fn render(text: &str, font: &dyn Font, options: &RenderOptions) -> Result<String, RenderError> {
     if text.trim().is_empty() {
         return Err(RenderError::EmptyInput);
@@ -39,6 +52,7 @@ pub fn render(text: &str, font: &dyn Font, options: &RenderOptions) -> Result<St
     Ok(rendered_lines.join("\n"))
 }
 
+/// Renders one logical input line into `font.height()` terminal rows.
 fn render_text_line(
     line: &str,
     font: &dyn Font,
@@ -64,6 +78,7 @@ fn render_text_line(
         .collect()
 }
 
+/// Applies the selected theme to a glyph matrix.
 fn apply_theme(glyph: &Glyph, theme: Theme) -> [String; 5] {
     let matrix = glyph.map(|row| row.chars().map(|ch| ch != ' ').collect::<Vec<_>>());
 
@@ -92,6 +107,9 @@ fn apply_theme(glyph: &Glyph, theme: Theme) -> [String; 5] {
     })
 }
 
+/// Returns the outline character for a filled glyph cell.
+///
+/// Interior cells are suppressed so only the border remains visible.
 fn outline_char(matrix: &[Vec<bool>; 5], row: usize, col: usize) -> char {
     if !matrix[row][col] {
         return ' ';

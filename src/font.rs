@@ -1,11 +1,17 @@
+/// A single fixed-height glyph stored as five rows of ASCII characters.
 pub type Glyph = [&'static str; 5];
 
+/// Interface implemented by ASCII-art fonts used by the text renderer.
 pub trait Font {
+    /// Returns the font's stable name.
     fn name(&self) -> &'static str;
+    /// Returns the glyph height in terminal rows.
     fn height(&self) -> usize;
+    /// Looks up the glyph for a character, returning a fallback when unsupported.
     fn glyph(&self, ch: char) -> &'static Glyph;
 }
 
+/// The crate's built-in 5-row block font.
 #[derive(Debug, Clone, Copy, Default)]
 pub struct StandardFont;
 

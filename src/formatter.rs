@@ -1,6 +1,9 @@
 use crate::error::RenderError;
 use crate::renderer::Alignment;
 
+/// Pads a rendered line to the requested width using the selected alignment.
+///
+/// Returns an error when the line is already wider than the available width.
 pub fn align_line(
     line: &str,
     alignment: Alignment,

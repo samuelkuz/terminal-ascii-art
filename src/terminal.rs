@@ -12,6 +12,7 @@ use terminal_size::{Height, Width, terminal_size};
 
 use crate::error::RenderError;
 
+/// Detects the current terminal width in columns using live queries and environment fallbacks.
 pub fn detect_terminal_width() -> Option<usize> {
     detect_live_terminal_size()
         .map(|(width, _)| width)
@@ -19,6 +20,7 @@ pub fn detect_terminal_width() -> Option<usize> {
         .or_else(|| terminal_size().map(|(Width(width), _)| usize::from(width)))
 }
 
+/// Detects the current terminal height in rows using live queries and environment fallbacks.
 pub fn detect_terminal_height() -> Option<usize> {
     detect_live_terminal_size()
         .map(|(_, height)| height)
@@ -26,6 +28,7 @@ pub fn detect_terminal_height() -> Option<usize> {
         .or_else(|| terminal_size().map(|(_, Height(height))| usize::from(height)))
 }
 
+/// Queries the active terminal for its current size.
 fn detect_live_terminal_size() -> Option<(usize, usize)> {
     size()
         .ok()
@@ -33,6 +36,7 @@ fn detect_live_terminal_size() -> Option<(usize, usize)> {
         .filter(|(width, height)| *width > 0 && *height > 0)
 }
 
+/// Reads terminal width from the `COLUMNS` environment variable.
 fn detect_terminal_width_from_env() -> Option<usize> {
     std::env::var("COLUMNS")
         .ok()
@@ -40,6 +44,7 @@ fn detect_terminal_width_from_env() -> Option<usize> {
         .filter(|width| *width > 0)
 }
 
+/// Reads terminal height from the `LINES` environment variable.
 fn detect_terminal_height_from_env() -> Option<usize> {
     std::env::var("LINES")
         .ok()
@@ -47,11 +52,13 @@ fn detect_terminal_height_from_env() -> Option<usize> {
         .filter(|height| *height > 0)
 }
 
+/// Manages alternate-screen terminal state for live video playback.
 pub struct TerminalSession {
     stdout: Stdout,
 }
 
 impl TerminalSession {
+    /// Enters raw mode, switches to the alternate screen, and hides the cursor.
     pub fn enter() -> Result<Self, RenderError> {
         enable_raw_mode().map_err(|error| RenderError::TerminalIo {
             message: error.to_string(),
@@ -71,6 +78,7 @@ impl TerminalSession {
         Ok(Self { stdout })
     }
 
+    /// Draws a full-frame string at the top-left corner of the alternate screen.
     pub fn draw_frame(&mut self, frame: &str) -> Result<(), RenderError> {
         self.stdout
             .queue(MoveTo(0, 0))
@@ -105,6 +113,7 @@ impl TerminalSession {
             })
     }
 
+    /// Returns `true` when the user has pressed `q` or `Q`.
     pub fn quit_requested(&mut self) -> Result<bool, RenderError> {
         if !event::poll(Duration::from_millis(0)).map_err(|error| RenderError::TerminalIo {
             message: error.to_string(),
@@ -125,6 +134,7 @@ impl TerminalSession {
         }
     }
 
+    /// Restores the terminal to its normal screen and input mode.
     fn restore(&mut self) -> Result<(), RenderError> {
         self.stdout
             .execute(Show)

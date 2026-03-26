@@ -14,22 +14,33 @@ use crate::terminal::TerminalSession;
 
 static INTERRUPTED: OnceLock<Arc<AtomicBool>> = OnceLock::new();
 
+/// Hardware acceleration modes exposed by the CLI for `ffmpeg` decoding.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, ValueEnum)]
 pub enum HwAccelMode {
+    /// Let `ffmpeg` choose an available acceleration backend.
     Auto,
+    /// Decode entirely in software.
     None,
 }
 
+/// Options controlling video playback and per-frame rendering.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct VideoRenderOptions {
+    /// Preferred output width in columns.
     pub width: Option<usize>,
+    /// Target playback frame rate.
     pub fps: u8,
+    /// Whether bright pixels should map to dense characters instead of sparse ones.
     pub invert: bool,
+    /// Whether to emit ANSI color in each rendered frame.
     pub color: bool,
+    /// Whether playback restarts automatically at end of stream.
     pub loop_playback: bool,
+    /// Hardware acceleration preference passed to `ffmpeg`.
     pub hwaccel: HwAccelMode,
 }
 
+/// Plays a video file in the terminal by decoding frames with `ffmpeg` and drawing them live.
 pub fn play_video(path: &Path, options: &VideoRenderOptions) -> Result<(), RenderError> {
     ensure_dependency("ffmpeg")?;
     ensure_dependency("ffprobe")?;
@@ -77,6 +88,7 @@ pub fn play_video(path: &Path, options: &VideoRenderOptions) -> Result<(), Rende
     Ok(())
 }
 
+/// Streams raw RGB frames from `ffmpeg` and renders them until EOF or user exit.
 fn play_stream(
     path: &Path,
     child: &mut Child,
@@ -134,6 +146,7 @@ fn play_stream(
     Ok(PlaybackEnd::Completed)
 }
 
+/// Reads exactly one RGB frame from the ffmpeg stdout pipe.
 fn read_frame(stdout: &mut ChildStdout, buffer: &mut [u8]) -> Result<FrameRead, RenderError> {
     let mut filled = 0usize;
     while filled < buffer.len() {
@@ -158,6 +171,7 @@ fn read_frame(stdout: &mut ChildStdout, buffer: &mut [u8]) -> Result<FrameRead, 
     Ok(FrameRead::Frame)
 }
 
+/// Probes source video dimensions via `ffprobe`.
 fn probe_video_dimensions(path: &Path) -> Result<(u32, u32), RenderError> {
     let output = Command::new("ffprobe")
         .args([
@@ -211,6 +225,7 @@ fn probe_video_dimensions(path: &Path) -> Result<(u32, u32), RenderError> {
     Ok((width, height))
 }
 
+/// Spawns an `ffmpeg` child process configured to output RGB24 frames on stdout.
 fn spawn_ffmpeg(
     path: &Path,
     target_width: u32,
@@ -242,6 +257,7 @@ fn spawn_ffmpeg(
     })
 }
 
+/// Builds the `ffmpeg` argument vector for scaled raw-frame playback.
 fn build_ffmpeg_args(
     path: &Path,
     target_width: u32,
@@ -268,6 +284,7 @@ fn build_ffmpeg_args(
     args
 }
 
+/// Checks that an external dependency is callable on the current `PATH`.
 fn ensure_dependency(name: &'static str) -> Result<(), RenderError> {
     Command::new(name)
         .arg("-version")
@@ -287,12 +304,14 @@ fn ensure_dependency(name: &'static str) -> Result<(), RenderError> {
     Ok(())
 }
 
+/// Computes the expected byte length for a decoded RGB24 video frame.
 fn expected_frame_len(width: u32, height: u32) -> Result<usize, RenderError> {
     let pixels = u64::from(width) * u64::from(height);
     let bytes = pixels.saturating_mul(3);
     usize::try_from(bytes).map_err(|_| RenderError::InvalidImageDimensions { width, height })
 }
 
+/// Waits for ffmpeg to exit and collects stderr for diagnostics.
 fn wait_for_child_stderr(child: &mut Child) -> String {
     let _ = child.wait();
 
@@ -304,11 +323,13 @@ fn wait_for_child_stderr(child: &mut Child) -> String {
     stderr.trim().to_owned()
 }
 
+/// Best-effort child termination used when quitting playback early.
 fn terminate_child(child: &mut Child) {
     let _ = child.kill();
     let _ = child.wait();
 }
 
+/// Returns the shared Ctrl-C interruption flag, installing the handler on first use.
 fn interrupted_flag() -> Result<Arc<AtomicBool>, RenderError> {
     if let Some(flag) = INTERRUPTED.get() {
         return Ok(Arc::clone(flag));
@@ -327,12 +348,14 @@ fn interrupted_flag() -> Result<Arc<AtomicBool>, RenderError> {
     Ok(flag)
 }
 
+/// Sleeps for the remainder of the frame budget when rendering completes early.
 fn sleep_remaining(frame_duration: Duration, started_at: Instant) {
     if let Some(remaining) = frame_duration.checked_sub(started_at.elapsed()) {
         thread::sleep(remaining);
     }
 }
 
+/// Maps process-spawn failures to either missing dependency or video probe errors.
 fn map_missing_or_probe(path: &Path) -> impl FnOnce(std::io::Error) -> RenderError + '_ {
     move |error| {
         if error.kind() == std::io::ErrorKind::NotFound {

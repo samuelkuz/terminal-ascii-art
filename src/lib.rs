@@ -1,10 +1,20 @@
+//! Core library for rendering text, images, and video as terminal-friendly ASCII art.
+
+/// Command-line parsing and validation types.
 pub mod cli;
+/// Shared error types returned by rendering operations.
 pub mod error;
+/// Built-in ASCII-art font definitions.
 pub mod font;
+/// Helpers for layout and line alignment.
 pub mod formatter;
+/// Image loading, sizing, and frame-to-ASCII conversion.
 pub mod image_renderer;
+/// Text rendering primitives and theming.
 pub mod renderer;
+/// Terminal capability detection and alternate-screen playback support.
 pub mod terminal;
+/// Video probing, decoding, and playback helpers.
 pub mod video;
 
 pub use error::RenderError;
@@ -15,6 +25,7 @@ pub use video::{HwAccelMode, VideoRenderOptions, play_video};
 
 use cli::{Cli, Commands};
 
+/// Executes a parsed CLI command and returns printable output when applicable.
 pub fn run(cli: Cli) -> Result<Option<String>, RenderError> {
     match cli.command {
         Commands::Text {
@@ -75,6 +86,9 @@ pub fn run(cli: Cli) -> Result<Option<String>, RenderError> {
     }
 }
 
+/// Resolves the effective output width from CLI input and the current terminal size.
+///
+/// When both values are present, an explicit width that exceeds the terminal width is rejected.
 pub fn resolve_output_width(
     requested_width: Option<usize>,
     terminal_width: Option<usize>,
